@@ -1,9 +1,11 @@
-
+#include <windows.h>
 #include <GL/glut.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 
 #define TAU 6.28318530718
+
 
 typedef GLfloat point2[2];
 
@@ -205,6 +207,7 @@ void create_menu() {
     glutAddMenuEntry("Exit", EXIT);
 
     glutAttachMenu(GLUT_RIGHT_BUTTON);
+
 }
 
 void create_seed() {
@@ -219,21 +222,20 @@ void main(int argc, char **argv) {
     h = 500;
 
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
 
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
     glutInitWindowSize(w, h);
     glutInitWindowPosition(0, 0);
     glutCreateWindow("Fractals");
+
 
     glutDisplayFunc(display);
     glutMouseFunc(mouse);
     glutMotionFunc(motion);
     glutReshapeFunc(reshape);
-
     create_seed();
     create_menu();
 
     init();
-
     glutMainLoop(); /* enter event loop */
 }

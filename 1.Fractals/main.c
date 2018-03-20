@@ -3,6 +3,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+typedef GLfloat point2[2];
+
+int w, h;
+
+int n = 5;
+float r = 1.0f / 3.0f;
+int loops = 10000;
 
 void myinit(void) {
 
@@ -22,40 +29,39 @@ void myinit(void) {
 
 void display(void) {
 
-/* define a point data type */
+	glClear(GL_COLOR_BUFFER_BIT);
 
-	typedef GLfloat point2[2];
+	point2 vertices[n];
 
-	point2 vertices[3] = {{0.0,   0.0},
-	                      {250.0, 500.0},
-	                      {500.0, 0.0}}; /* A triangle */
+	for (int i = 0; i < n; i++) {
 
-	int i, j, k;
-	//long rand();       /* standard random number generator */
-	point2 p = {75.0, 50.0};  /* An srbitrary initial point */
-
-	glClear(GL_COLOR_BUFFER_BIT);  /*clear the window */
-
-
-/* computes and plots 5000 new points */
-
-	for (k = 0; k < 5000; k++) {
-		j = rand() % 3; /* pick a vertex at random */
-
-
-		/* Compute point halfway between vertex and old point */
-
-		p[0] = (p[0] + vertices[j][0]) / 2.0;
-		p[1] = (p[1] + vertices[j][1]) / 2.0;
-
-		/* plot new point */
-
-		glBegin(GL_POINTS);
-		glVertex2fv(p);
-		glEnd();
-
+		vertices[i][0] = 0;
+		vertices[i][1] = 0;
 	}
-	glFlush(); /* clear buffers */
+
+	point2 p = {75.0, 50.0}; // TODO make it random
+
+	glBegin(GL_POINTS);
+	for (int k = 0; k < loops; k++) {
+
+		int j = rand() % 3;
+
+		p[0] = (p[0] + vertices[j][0]) * r;
+		p[1] = (p[1] + vertices[j][1]) * r;
+
+		glVertex2fv(p);
+	}
+	glEnd();
+
+	glutSwapBuffers();
+}
+
+void mouse(int button, int state, int mouse_x, int mouse_y) {
+
+}
+
+void reshape(int new_w, int new_h) {
+
 }
 
 void main(int argc, char **argv) {
@@ -63,13 +69,17 @@ void main(int argc, char **argv) {
 /* Standard GLUT initialization */
 
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB); /* default, not needed */
-	glutInitWindowSize(500, 500); /* 500 x 500 pixel window */
-	glutInitWindowPosition(0, 0); /* place window top left on display */
-	glutCreateWindow("Sierpinski Gasket"); /* window title */
-	glutDisplayFunc(display); /* display callback invoked when window opened */
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB); /* default, not needed */
 
-	myinit(); /* set attributes */
+	glutInitWindowSize(w = 500, h = 500); /* 500 x 500 pixel window */
+	glutInitWindowPosition(0, 0); /* place window top left on display */
+	glutCreateWindow("Fractals");
+
+	glutDisplayFunc(display);
+	glutMouseFunc(mouse);
+	glutReshapeFunc(reshape);
+
+	myinit();
 
 	glutMainLoop(); /* enter event loop */
 }

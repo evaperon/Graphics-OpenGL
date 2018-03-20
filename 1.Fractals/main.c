@@ -13,6 +13,9 @@ int w, h;
 int n = 5;
 float r = 1.0f / 3.0f;
 int loops = 10000;
+char colorful = 0;
+
+float x_off = 0, y_off = 0;
 
 void myinit(void) {
 
@@ -26,7 +29,7 @@ void myinit(void) {
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluOrtho2D(0.0, w, 0.0, h);
+	gluOrtho2D(0.0 + x_off, w + x_off, 0.0 + y_off, h + y_off);
 	glMatrixMode(GL_MODELVIEW);
 }
 
@@ -42,6 +45,12 @@ void create_polygon(int n, point2 vertices[]) {
 
 }
 
+void set_random_color() {
+
+	// TODO generate better colors
+	glColor3ub(rand() % 255, rand() % 255, rand() % 255);
+}
+
 void display(void) {
 
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -55,6 +64,7 @@ void display(void) {
 
 	point2 p = {vertices[0][0], vertices[0][1]}; // TODO make it random
 
+	set_random_color();
 	glBegin(GL_POINTS);
 	for (int i = 0; i < loops; i++) {
 
@@ -62,6 +72,10 @@ void display(void) {
 
 		p[0] += (vertices[j][0] - p[0]) * (1-r);
 		p[1] += (vertices[j][1] - p[1]) * (1-r);
+
+		if (colorful) {
+			set_random_color();
+		}
 
 		glVertex2fv(p);
 	}
@@ -74,9 +88,31 @@ int mouse_dragging = 0, mouse_last_x, mouse_last_y;
 
 void mouse(int button, int state, int mouse_x, int mouse_y) {
 
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+		mouse_dragging = 1;
+		mouse_last_x = mouse_x;
+		mouse_last_y = mouse_y;
+	} else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
+		mouse_dragging = 0;
+	}
+
 }
 
 void motion(int mouse_x, int mouse_y) {
+
+	if (mouse_dragging) {
+
+		x_off -= mouse_x - mouse_last_x;
+		y_off += mouse_y - mouse_last_y;
+
+		mouse_last_x = mouse_x;
+		mouse_last_y = mouse_y;
+
+		myinit();
+		glutPostRedisplay();
+
+	}
+
 
 }
 
@@ -93,17 +129,35 @@ void reshape(int new_w, int new_h) {
 //	glutPostRedisplay();
 }
 
+void menu(int id) {
+
+	if (id == 0) {
+		exit(0);
+	}
+
+	switch (id) {
+		case 1:
+			loops = 8000;
+			colorful = 0;
+			break;
+		case 2:
+			loops = 10000;
+			colorful = 1;
+			break;
+	}
+
+	glutPostRedisplay();
+}
+
 void create_menu() {
 
 	glutCreateMenu(menu);
 
-	glutAddMenuEntry("test", 1);
+	glutAddMenuEntry("8000 points, same color", 1);
+	glutAddMenuEntry("10000 points, random color", 2);
+	glutAddMenuEntry("Exit", 0);
 
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
-}
-
-void menu(int id) {
-
 }
 
 void main(int argc, char **argv) {

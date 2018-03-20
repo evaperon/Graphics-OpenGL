@@ -1,7 +1,6 @@
 
 #include <GL/glut.h>
 #include <stdlib.h>
-//#include <stdio.h>
 #include <math.h>
 
 #define TAU 6.28318530718
@@ -14,7 +13,7 @@ enum options {
 
 int w, h;
 
-int n = 6;
+int n = 5;
 float r = 1.0f / 3.0f;
 int loops = 10000;
 char colorful = 0;
@@ -22,7 +21,25 @@ int seed;
 
 float x_off = 0, y_off = 0;
 
-void init(void) {
+void init();
+void display();
+
+void set_projection();
+void set_random_color();
+
+void create_polygon(int n, point2 vertices[]);
+void create_random_point(int n, point2 vertices[], GLfloat point[]);
+void create_menu();
+void create_seed();
+
+void mouse(int button, int state, int mouse_x, int mouse_y);
+void motion(int mouse_x, int mouse_y);
+void reshape(int new_w, int new_h);
+void menu(int id);
+
+// ===
+
+void init() {
 
     glEnable(GL_BLEND);
     glClearColor(1.0, 1.0, 1.0, 0.0); /* white background */
@@ -53,13 +70,21 @@ void create_polygon(int n, point2 vertices[]) {
 
 }
 
-void set_random_color() {
+void create_random_point(int n, point2 vertices[], GLfloat point[]) {
+	int i1 = rand() % n;
+	int i2 = rand() % n;
+	float a = rand() % 1000 / 1000.0f;
 
-    // TODO generate better colors
-    glColor3ub(rand() % 255, rand() % 255, rand() % 255);
+	point[0] = vertices[i1][0] + (vertices[i2][0] - vertices[i1][0]) * a;
+	point[1] = vertices[i1][1] + (vertices[i2][1] - vertices[i1][1]) * a;
 }
 
-void display(void) {
+void set_random_color() {
+
+   glColor3ub(rand() % 255, rand() % 255, rand() % 255);
+}
+
+void display() {
 
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -68,11 +93,8 @@ void display(void) {
     point2 vertices[n];
     create_polygon(n, vertices);
 
-//	glBegin(GL_TRIANGLE_FAN);
-//	for (int i = 0; i < n; i++) glVertex2fv(vertices[i]);
-//	glEnd();
-
-    point2 p = {vertices[0][0], vertices[0][1]}; // TODO make it random
+    point2 p = {};
+	create_random_point(n, vertices, p);
 
     set_random_color();
     glBegin(GL_POINTS);
@@ -184,7 +206,6 @@ void create_menu() {
 
     glutAttachMenu(GLUT_RIGHT_BUTTON);
 }
-
 
 void create_seed() {
 

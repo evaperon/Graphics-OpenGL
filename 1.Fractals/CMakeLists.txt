@@ -11,4 +11,4 @@ include_directories( ${OPENGL_INCLUDE_DIRS}  ${GLUT_INCLUDE_DIRS} )
 set(SOURCE_FILES main.c)
 add_executable(1_Fractals ${SOURCE_FILES})
 
-target_link_libraries(1_Fractals ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} )
+target_link_libraries(1_Fractals ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} -lm )

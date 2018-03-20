@@ -26,13 +26,13 @@ void myinit(void) {
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluOrtho2D(0.0, 500.0, 0.0, 500.0);
+	gluOrtho2D(0.0, w, 0.0, h);
 	glMatrixMode(GL_MODELVIEW);
 }
 
 void create_polygon(int n, point2 vertices[]) {
 
-	int size = (w < h ? w : h) / 2; // half the size of the screen
+	int size = (w < h ? w : h) / 4; // half the size of the screen
 
 	for (int i = 0; i < n; i++) {
 
@@ -49,20 +49,19 @@ void display(void) {
 	point2 vertices[n];
 	create_polygon(n, vertices);
 
-
 //	glBegin(GL_TRIANGLE_FAN);
 //	for (int i = 0; i < n; i++) glVertex2fv(vertices[i]);
 //	glEnd();
 
-	point2 p = {75.0, 50.0}; // TODO make it random
+	point2 p = {vertices[0][0], vertices[0][1]}; // TODO make it random
 
 	glBegin(GL_POINTS);
 	for (int i = 0; i < loops; i++) {
 
-		int j = rand() % 3;
+		int j = rand() % n;
 
-		p[0] = (p[0] + vertices[j][0]) * r;
-		p[1] = (p[1] + vertices[j][1]) * r;
+		p[0] += (vertices[j][0] - p[0]) * (1-r);
+		p[1] += (vertices[j][1] - p[1]) * (1-r);
 
 		glVertex2fv(p);
 	}
@@ -71,11 +70,39 @@ void display(void) {
 	glutSwapBuffers();
 }
 
+int mouse_dragging = 0, mouse_last_x, mouse_last_y;
+
 void mouse(int button, int state, int mouse_x, int mouse_y) {
 
 }
 
+void motion(int mouse_x, int mouse_y) {
+
+}
+
 void reshape(int new_w, int new_h) {
+
+//	w = new_w;
+//	h = new_h;
+//
+//	glMatrixMode(GL_PROJECTION);
+//	glLoadIdentity();
+//	gluOrtho2D(0.0, w, 0.0, h);
+//	glMatrixMode(GL_MODELVIEW);
+//
+//	glutPostRedisplay();
+}
+
+void create_menu() {
+
+	glutCreateMenu(menu);
+
+	glutAddMenuEntry("test", 1);
+
+	glutAttachMenu(GLUT_RIGHT_BUTTON);
+}
+
+void menu(int id) {
 
 }
 
@@ -92,7 +119,10 @@ void main(int argc, char **argv) {
 
 	glutDisplayFunc(display);
 	glutMouseFunc(mouse);
+	glutMotionFunc(motion);
 	glutReshapeFunc(reshape);
+
+	create_menu();
 
 	myinit();
 

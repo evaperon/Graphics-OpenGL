@@ -1,0 +1,4 @@
+"C:\Program Files\CLion 2017.3.4\bin\cmake\bin\cmake.exe" -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - MinGW Makefiles" C:\cygwin64\home\peron\Graphics-OpenGL\2.Cube
+-- Configuring done
+-- Generating done
+-- Build files have been written to: C:/cygwin64/home/peron/Graphics-OpenGL/2.Cube/cmake-build-debug

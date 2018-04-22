@@ -1,7 +1,3 @@
-/****************************************************************/
-/*******Ακριτίδης Ακρίτας, akritasa@csd.auth.gr  AEM:2559********/
-/*******Περόντση Εύα, evaperon@csd.auth.gr  AEM:2492*************/
-/****************************************************************/
 
 #ifndef linux
 #include <windows.h>
@@ -13,10 +9,214 @@
 #include <math.h>
 #include <time.h>
 
+// === Types ===
 
+typedef GLfloat point3[3];
 
+enum options {
+	EXIT, // TODO fill with the menu options
+};
 
-int main() {
-	printf("Hello, World!\n");
-	return 0;
+// === Data ===
+
+int w, h;
+int seed;
+
+float param_a = 8;
+float param_b = 90;
+point3 param_v = {1, 2, 6};
+
+float angle_speed = 90;
+float scale_speed = 2;
+
+float t; // contains the current time in seconds
+
+// === Declarations ===
+
+void init();
+
+void display();
+
+void idle();
+
+void set_projection();
+
+void set_random_color();
+
+void create_component();
+
+void draw_component(float rotate_x, float rotate_y, float size);
+
+void draw_shape();
+
+void draw_cube();
+
+void create_menu();
+
+void create_seed();
+
+void reshape(int new_w, int new_h);
+
+void menu(int id);
+
+// === Implementation ===
+
+void init() {
+
+	glEnable(GL_BLEND);
+	glClearColor(1.0, 1.0, 1.0, 0.0);
+	glColor3f(1.0, 0.0, 0.0);
+
+	set_projection();
+}
+
+void set_projection() {
+
+	int s = 50;
+
+	glViewport(0, 0, w, h);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(-s, s, -s, s, -200, 200); // TODO change ??
+
+	glMatrixMode(GL_MODELVIEW);
+}
+
+void create_component() {
+
+	glNewList(1, GL_COMPILE);
+	{
+		glBegin(GL_POLYGON);
+		glVertex3f(-2, 2, 1);
+		glVertex3f(2, 2, 1);
+		glVertex3f(2, -2, 1);
+		glVertex3f(-2, -2, 1);
+		glEnd();
+	}
+	glEndList();
+}
+
+void draw_component(float rotate_x, float rotate_y, float size) {
+	glPushMatrix();
+
+	glTranslatef(0, 0, -1);
+	float scale = size / 2; // 2 is the size of the component
+	glScalef(scale, scale, scale);
+	glRotatef(rotate_x, 1, 0, 0);
+	glRotatef(rotate_y, 0, 1, 0);
+	glTranslatef(0, 0, 1); // this is as far from origin as the size
+
+	set_random_color();
+	glCallList(1);
+
+	glPopMatrix();
+}
+
+void draw_shape() {
+
+	// TODO choose between all the possible shapes
+
+	draw_cube();
+}
+
+void draw_cube() {
+	glPushMatrix();
+
+	draw_component(0, 0, param_a);
+	draw_component(0, 90, param_a);
+	draw_component(0, 180, param_a);
+	draw_component(0, 270, param_a);
+	draw_component(90, 0, param_a);
+	draw_component(-90, 0, param_a);
+
+	glPopMatrix();
+}
+
+void set_random_color() {
+
+	glColor3ub(rand() % 255, rand() % 255, rand() % 255);
+}
+
+void display() {
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	srand(seed);
+
+	glPushMatrix();
+
+	// TODO implement the second mode of rotation
+
+	float angle = t * angle_speed; // in degrees
+	float scale = 1 + (1 + sin(t * scale_speed) * 1.0f); // from 1 to 3
+
+	glTranslatef(0, 0, -param_b);
+	glRotatef(angle, param_v[0], param_v[1], param_v[2]);
+	glScalef(scale, scale, scale);
+
+	draw_shape();
+
+	glPopMatrix();
+
+	glutSwapBuffers();
+}
+
+void idle() {
+
+	t = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+
+	glutPostRedisplay();
+}
+
+void reshape(int new_w, int new_h) {
+
+	w = new_w;
+	h = new_h;
+
+	set_projection();
+	glutPostRedisplay();
+}
+
+void menu(int id) {
+
+	// TODO handle the menu actions
+
+	glutPostRedisplay();
+}
+
+void create_menu() {
+
+	// TODO create the menu
+
+}
+
+void create_seed() {
+
+	//srand(time(0)); // risky random seed
+	srand(3); // nice fixed random seed
+	seed = rand();
+}
+
+void main(int argc, char **argv) {
+
+	w = 500;
+	h = 500;
+
+	glutInit(&argc, argv);
+
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+	glutInitWindowSize(w, h);
+	glutInitWindowPosition(0, 0);
+	glutCreateWindow("Cube");
+
+	glEnable(GL_DEPTH_TEST);
+
+	glutDisplayFunc(display);
+	glutIdleFunc(idle);
+	glutReshapeFunc(reshape);
+	create_seed();
+	create_menu();
+	create_component();
+
+	init();
+	glutMainLoop();
 }

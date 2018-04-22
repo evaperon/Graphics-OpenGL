@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(2_Cube C)
+project(2_Cube)
 
 set(CMAKE_C_STANDARD 99)
 
@@ -25,7 +25,7 @@ if (WIN32)
     set(GLU_LIBRARY "C:/Windows/System32/glu32.dll")
 
     find_package(OpenGL REQUIRED)
-    find_package(GLUT REQUIRED)
+    #find_package(GLUT )
 
     include_directories( ${OPENGL_INCLUDE_DIRS}  ${GLUT_INCLUDE_DIR} )
 
@@ -35,4 +35,3 @@ if (WIN32)
     target_link_libraries(2_Cube ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} ${GLU_LIBRARY} -lm )
 
 endif (WIN32)
-

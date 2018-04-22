@@ -1,3 +1,0 @@
-"C:\Program Files\CLion 2017.3.4\bin\cmake\bin\cmake.exe" -E remove -f CMakeFiles\2_Cube.dir/objects.a
-C:\MinGW\bin\ar.exe cr CMakeFiles\2_Cube.dir/objects.a @CMakeFiles\2_Cube.dir\objects1.rsp
-C:\MinGW\bin\gcc.exe -g   -Wl,--whole-archive CMakeFiles\2_Cube.dir/objects.a -Wl,--no-whole-archive  -o 2_Cube.exe -Wl,--out-implib,lib2_Cube.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\2_Cube.dir\linklibs.rsp

@@ -14,26 +14,58 @@
 typedef GLfloat point3[3];
 
 enum options {
-	EXIT, FIRST_MODE, SECOND_MODE//, CUBE, ICOSAHEDRON
+	EXIT,
+	POLYGONS_LOW, POLYGONS_HIGH, POLYGONS_ULTRA,
+	SPOTLIGHT_ON, SPOTLIGHT_ON_MOVING, SPOTLIGHT_OFF,
+	SHADER_SMOOTH, SHADER_FLAT
 };
 
 // === Data ===
 
 int w, h;
 int seed;
+int polygons;
 
-int mode = FIRST_MODE;
-
-//int shape = CUBE;
-
-float param_a = 8;
-float param_b = 90;
-point3 param_v = {1, 2, 6};
-
-float angle_speed = 90;
-float scale_speed = 2;
+float sun_speed = 40;
+float camera_rotation = 0;
+char spotlight_speed = 0;
 
 float t; // contains the current time in seconds
+
+// ==
+
+const GLfloat sunlight_ambient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat sunlight_diffuse[] = {0.3f, 0.3f, 0.3f, 1.0f};
+GLfloat sunlight_specular[] = {0.3f, 0.3f, 0.3f, 1.0f};
+GLfloat sunlight_position[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+const GLfloat spotlight_ambient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+const GLfloat spotlight_diffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+const GLfloat spotlight_specular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+//const GLfloat spotlight_position[] = { 5.0f, 10+(float) sqrt(75.0), 0.5f, 1.0f };
+//const GLfloat sd[] = {0.0f, -1.0f, 0.0f, 0.0f};
+
+const GLfloat sphere_emission[] = {1.0f, 1.0f, 0.0f, 1.0f};
+const GLfloat sphere_ambient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+const GLfloat sphere_diffuse[] = {0.0f, 0.0f, 0.0f, 1.0f};
+const GLfloat sphere_specular[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+const GLfloat ground_emission[] = {0.0f, 0.0f, 0.0f, 1.0f};
+const GLfloat ground_ambient[] = {124.0f / 255.0f, 252.0f / 255.0f, 0.0f, 1.0f};
+const GLfloat ground_diffuse[] = {124.0f / 255.0f, 252.0f / 255.0f, 0.0f, 1.0f};
+const GLfloat ground_specular[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+const GLfloat house_emission[] = {0.0f, 0.0f, 0.0f, 1.0f};
+const GLfloat house_ambient[] = {89.0f / 255.0f, 38.0f / 255.0f, 9.0f / 255.0f, 1.0f};
+const GLfloat house_diffuse[] = {89.0f / 255.0f, 38.0f / 255.0f, 9.0f / 255.0f, 1.0f};
+const GLfloat house_specular[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+const GLfloat roof_emission[] = {0.0f, 0.0f, 0.0f, 1.0f};
+const GLfloat roof_ambient[] = {0.5f, 0.5f, 0.5f, 1.0f};
+const GLfloat roof_diffuse[] = {0.5f, 0.5f, 0.5f, 1.0f};
+const GLfloat roof_specular[] = {0.9f, 0.9f, 0.9f, 1.0f};
+const GLfloat high_shininess[] = {100.0f};
+
 
 // === Declarations ===
 
@@ -45,16 +77,6 @@ void idle();
 
 void set_projection();
 
-void set_random_color();
-
-void create_component();
-
-void draw_component(float rotate_x, float rotate_y, float size);
-
-void draw_shape();
-
-void draw_cube();
-
 void create_menu();
 
 void create_seed();
@@ -63,78 +85,331 @@ void reshape(int new_w, int new_h);
 
 void menu(int id);
 
+void draw_quad(point3 p1, point3 p2, point3 p3, point3 p4);
+
+void draw_triangle(point3 p1, point3 p2, point3 p3);
+
+// === Utils ===
+
+void point3_mid(point3 p, point3 p1, point3 p2) {
+
+	for (int i = 0; i < 3; i++) p[i] = (p1[i] + p2[i]) / 2;
+}
+
+void point3_add(point3 p, point3 p1, point3 p2) {
+
+	for (int i = 0; i < 3; i++) p[i] = p1[i] + p2[i];
+}
+
+void point3_dif(point3 p, point3 p1, point3 p2) {
+
+	for (int i = 0; i < 3; i++) p[i] = p1[i] - p2[i];
+}
+
+void point3_norm(point3 p) {
+
+	float len = sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2]);
+	if (len == 0) return;
+
+	for (int i = 0; i < 3; i++) p[i] /= len;
+}
+
+void point3_normal(point3 p, point3 p1, point3 p2, point3 p3, point3 p4) {
+
+	point3 a, b;
+	point3_dif(a, p3, p1);
+	point3_dif(b, p4, p2);
+
+	p[0] = a[1] * b[2] - a[2] * b[1];
+	p[1] = a[2] * b[0] - a[0] * b[2];
+	p[2] = a[0] * b[1] - a[1] * b[0];
+
+	point3_norm(p);
+}
+
+void draw_quad(point3 p1, point3 p2, point3 p3, point3 p4) {
+
+	point3 normal;
+	point3_normal(normal, p1, p2, p3, p4);
+
+	glBegin(GL_QUADS);
+	glNormal3fv(normal);
+	glVertex3fv(p1);
+	glVertex3fv(p2);
+	glVertex3fv(p3);
+	glVertex3fv(p4);
+	glEnd();
+}
+
+void draw_triangle(point3 p1, point3 p2, point3 p3) {
+
+	point3 normal;
+	point3_normal(normal, p1, p2, p3, p3); // TODO fix
+
+	glBegin(GL_TRIANGLES);
+	glNormal3fv(normal);
+	glVertex3fv(p1);
+	glVertex3fv(p2);
+	glVertex3fv(p3);
+	glEnd();
+}
+
 // === Implementation ===
 
 void init() {
 
-	glEnable(GL_BLEND);
-	glClearColor(1.0, 1.0, 1.0, 0.0);
-	glColor3f(1.0, 0.0, 0.0);
-
+	glClearColor(0.0, 0.0, 0.0, 1.0);
 	set_projection();
 }
 
 void set_projection() {
 
-	int s = 50;
 
 	glViewport(0, 0, w, h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(-s, s, -s, s, -200, 200);
+
+	float s = 60;
+
+	// keep a fixed ratio
+	if (h > w) {
+		float ratio = 1.0f * h / w;
+		glOrtho(-s, s, -s * ratio, s * ratio, -300, 300);
+	} else {
+		float ratio = 1.0f * w / h;
+		glOrtho(-s * ratio, s * ratio, -s, s, -300, 300);
+	}
 
 	glMatrixMode(GL_MODELVIEW);
 }
 
-void create_component() {
+void draw_ground() {
 
-	glNewList(1, GL_COMPILE);
-	{
-		glBegin(GL_POLYGON);
-		glVertex3f(-1, 1, 1);
-		glVertex3f(1, 1, 1);
-		glVertex3f(1, -1, 1);
-		glVertex3f(-1, -1, 1);
-		glEnd();
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, ground_emission);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ground_ambient);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, ground_diffuse);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, ground_specular);
+
+	GLfloat size = 40;
+
+	point3 p1 = {-size, 0, size};
+	point3 p2 = {size, 0, size};
+	point3 p3 = {size, 0, -size};
+	point3 p4 = {-size, 0, -size};
+
+	if (polygons == 1) {
+
+		draw_quad(p1, p2, p3, p4);
+
+	} else {
+
+		point3 normal;
+		point3_normal(normal, p1, p2, p3, p4);
+
+		float step = 2 * size / sqrt(polygons);
+
+		for (float x = -size; x < size; x += step) {
+
+			glBegin(GL_QUAD_STRIP);
+			glNormal3fv(normal);
+
+			for (float z = -size; z <= size; z += step) {
+
+				point3 p1 = {x, 0, z};
+				point3 p2 = {x + step, 0, z};
+				glVertex3fv(p1);
+				glVertex3fv(p2);
+			}
+
+			glEnd();
+		}
+
 	}
-	glEndList();
+
 }
 
-void draw_component(float rotate_x, float rotate_y, float size) {
-	glPushMatrix();
+void draw_house() {
 
-	float scale = size / 2; // 2 is the size of the component
-	glScalef(scale, scale, scale);
-	glRotatef(rotate_x, 1, 0, 0);
-	glRotatef(rotate_y, 0, 1, 0);
+	// body
 
-	set_random_color();
-	glCallList(1);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, house_emission);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, house_ambient);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, house_diffuse);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, house_specular);
 
-	glPopMatrix();
+
+	{
+		point3 p1 = {-5, 0, 10};
+		point3 p2 = {-5, 10, 10};
+		point3 p3 = {5, 10, 10};
+		point3 p4 = {5, 0, 10};
+
+		draw_quad(p1, p2, p3, p4);
+	}
+	{
+		point3 p1 = {-5, 0, -10};
+		point3 p2 = {-5, 10, -10};
+		point3 p3 = {5, 10, -10};
+		point3 p4 = {5, 0, -10};
+
+		draw_quad(p1, p2, p3, p4);
+	}
+	{ // left
+		point3 p1 = {-5, 0, -10};
+		point3 p2 = {-5, 0, 10};
+		point3 p3 = {-5, 10, 10};
+		point3 p4 = {-5, 10, -10};
+
+		draw_quad(p1, p2, p3, p4);
+	}
+	{
+		point3 p1 = {5, 0, -10};
+		point3 p2 = {5, 10, -10};
+		point3 p3 = {5, 10, 10};
+		point3 p4 = {5, 0, 10};
+
+		draw_quad(p1, p2, p3, p4);
+	}
+	{
+		point3 p1 = {5, 0, -10};
+		point3 p2 = {-5, 0, -10};
+		point3 p3 = {-5, 0, 10};
+		point3 p4 = {5, 0, 10};
+
+		draw_quad(p1, p2, p3, p4);
+	}
+	{
+		point3 p1 = {5, 10, -10};
+		point3 p2 = {-5, 10, -10};
+		point3 p3 = {-5, 10, 10};
+		point3 p4 = {5, 10, 10};
+
+		draw_quad(p1, p2, p3, p4);
+	}
+
+	// roof
+
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, roof_emission);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, roof_ambient);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, roof_diffuse);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, roof_specular);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, high_shininess);
+
+
+	GLfloat rooftop = 10 + sin(M_PI / 3) * 10;
+
+	{ // left
+		point3 p1 = {0, rooftop, 10};
+		point3 p2 = {0, rooftop, -10};
+		point3 p3 = {-5, 10, -10};
+		point3 p4 = {-5, 10, 10};
+
+		draw_quad(p1, p2, p3, p4);
+	}
+	{
+		point3 p1 = {5, 10, 10};
+		point3 p2 = {5, 10, -10};
+		point3 p3 = {0, rooftop, -10};
+		point3 p4 = {0, rooftop, 10};
+
+		draw_quad(p1, p2, p3, p4);
+	}
+
+	{
+		point3 p1 = {-5, 10, 10};
+		point3 p2 = {0, rooftop, 10};
+		point3 p3 = {5, 10, 10};
+
+		draw_triangle(p1, p2, p3);
+
+	}
+	{
+		point3 p1 = {-5, 10, -10};
+		point3 p2 = {5, 10, -10};
+		point3 p3 = {0, rooftop, -10};
+
+		draw_triangle(p1, p2, p3);
+	}
+
 }
 
-void draw_shape() {
+void draw_part(point3 p1, point3 p2, point3 p3, int splits) {
 
-	draw_cube();
+	if (splits == 0) {
+
+		glBegin(GL_TRIANGLES);
+		glVertex3fv(p1);
+		glVertex3fv(p2);
+		glVertex3fv(p3);
+		glEnd();
+
+	} else {
+
+		point3 p12, p23, p31;
+		point3_mid(p12, p1, p2);
+		point3_mid(p23, p2, p3);
+		point3_mid(p31, p3, p1);
+
+		point3_norm(p12);
+		point3_norm(p23);
+		point3_norm(p31);
+
+		draw_part(p1, p12, p31, splits - 1);
+		draw_part(p2, p23, p12, splits - 1);
+		draw_part(p3, p31, p23, splits - 1);
+		draw_part(p12, p23, p31, splits - 1);
+	}
 }
 
-void draw_cube() {
-	glPushMatrix();
+void draw_sun(float lumens) {
 
-	draw_component(0, 0, param_a);
-	draw_component(0, 90, param_a);
-	draw_component(0, 180, param_a);
-	draw_component(0, 270, param_a);
-	draw_component(90, 0, param_a);
-	draw_component(-90, 0, param_a);
+	GLfloat sunlight_diffuse[] = {lumens, lumens, lumens, 1.0f};
+	GLfloat sunlight_specular[] = {lumens, lumens, lumens, 1.0f};
 
-	glPopMatrix();
+	glLightfv(GL_LIGHT0, GL_AMBIENT, sunlight_ambient);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, sunlight_diffuse);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, sunlight_specular);
+	glLightfv(GL_LIGHT0, GL_POSITION, sunlight_position);
+
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, sphere_emission);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, sphere_ambient);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, sphere_diffuse);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, sphere_specular);
+
+	point3 v[] = {
+		{0.0,        0.0,        1.0f},
+		{0.0,        0.942809f,  -0.33333f},
+		{-0.816497f, -0.471405f, -0.333333f},
+		{0.816497f,  -0.471405f, -0.333333f}
+	};
+
+	int splits = 4;
+
+	draw_part(v[0], v[1], v[2], splits);
+	draw_part(v[0], v[2], v[3], splits);
+	draw_part(v[0], v[3], v[1], splits);
+	draw_part(v[1], v[2], v[3], splits);
+
 }
 
-void set_random_color() {
+void draw_spotlight() {
 
-	glColor3ub(rand() % 255, rand() % 255, rand() % 255);
+	GLfloat rooftop = 10 + sin(M_PI / 3) * 10;
+
+	GLfloat p[] = {0, rooftop, 10, 1};
+
+	float angle = sin(t * spotlight_speed) * 0.5;
+	GLfloat direction[] = {angle, -1.0f, 0.4f};
+	point3_norm(direction);
+
+	glLightfv(GL_LIGHT1, GL_AMBIENT, spotlight_ambient);
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, spotlight_diffuse);
+	glLightfv(GL_LIGHT1, GL_SPECULAR, spotlight_specular);
+	glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 30.0f);
+	glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 1.0f);
+	glLightfv(GL_LIGHT1, GL_POSITION, p);
+	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, direction);
+
 }
 
 void display() {
@@ -142,30 +417,24 @@ void display() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	srand(seed);
 
+	glLoadIdentity();
+
+	gluLookAt(0, 40, 70, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+	glRotatef(camera_rotation, 0, 1, 0);
+
+	float sun_angle = fmod(t * sun_speed, 180); // in degrees
+	float sun_lumens = 0.3 + 0.7 * sin(sun_angle * M_PI / 180); // from 0.3 to 1.0
+
+	draw_ground();
+	draw_house();
+	draw_spotlight();
+
 	glPushMatrix();
-
-	float angle = t * angle_speed; // in degrees
-	float scale = 1 + (1 + sin(t * scale_speed) * 1.0f); // from 1 to 3
-
-	if (mode == FIRST_MODE) {
-
-		glTranslatef(0, 0, -param_b);
-		glRotatef(angle, param_v[0], param_v[1], param_v[2]);
-		glScalef(scale, scale, scale);
-
-		draw_shape();
-	} else if (mode == SECOND_MODE) {
-		glTranslated(0, 0, -8 * param_b / 10);
-		glRotated(angle, param_v[0], param_v[1], param_v[2]);
-		glTranslated(0, 0, 8 * param_b / 10);
-
-		glRotatef(angle, param_v[0], param_v[1], param_v[2]);
-		glScalef(scale, scale, scale);
-
-		draw_shape();
-	}
-
+	glRotatef(-sun_angle, 0, 0, 1);
+	glTranslatef(-50, 0, 0);
+	draw_sun(sun_lumens);
 	glPopMatrix();
+
 
 	glutSwapBuffers();
 }
@@ -192,11 +461,31 @@ void menu(int id) {
 		case EXIT:
 			exit(0);
 			break;
-		case FIRST_MODE:
-			mode = FIRST_MODE;
+		case POLYGONS_LOW:
+			polygons = 1;
 			break;
-		case SECOND_MODE:
-			mode = SECOND_MODE;
+		case POLYGONS_HIGH:
+			polygons = 100;
+			break;
+		case POLYGONS_ULTRA:
+			polygons = 10000;
+			break;
+		case SPOTLIGHT_ON:
+			glEnable(GL_LIGHT1);
+			spotlight_speed = 0;
+			break;
+		case SPOTLIGHT_ON_MOVING:
+			glEnable(GL_LIGHT1);
+			spotlight_speed = 1;
+			break;
+		case SPOTLIGHT_OFF:
+			glDisable(GL_LIGHT1);
+			break;
+		case SHADER_SMOOTH:
+			glShadeModel(GL_SMOOTH);
+			break;
+		case SHADER_FLAT:
+			glShadeModel(GL_FLAT);
 			break;
 		default:
 			return;
@@ -207,14 +496,53 @@ void menu(int id) {
 
 void create_menu() {
 
-	glutCreateMenu(menu);
+	int menu_polygons = glutCreateMenu(menu);
+	glutAddMenuEntry("Low", POLYGONS_LOW);
+	glutAddMenuEntry("High", POLYGONS_HIGH);
+	glutAddMenuEntry("Ultra", POLYGONS_ULTRA);
 
-	glutAddMenuEntry("First mode", FIRST_MODE);
-	glutAddMenuEntry("Second mode", SECOND_MODE);
+	int menu_spotlight = glutCreateMenu(menu);
+	glutAddMenuEntry("On", SPOTLIGHT_ON);
+	glutAddMenuEntry("On Moving", SPOTLIGHT_ON_MOVING);
+	glutAddMenuEntry("Off", SPOTLIGHT_OFF);
+
+	int menu_shader = glutCreateMenu(menu);
+	glutAddMenuEntry("Smooth", SHADER_SMOOTH);
+	glutAddMenuEntry("Flat", SHADER_FLAT);
+
+	glutCreateMenu(menu);
+	glutAddSubMenu("Polygons", menu_polygons);
+	glutAddSubMenu("Spotlight", menu_spotlight);
+	glutAddSubMenu("Shader", menu_shader);
 	glutAddMenuEntry("Exit", EXIT);
 
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
+}
 
+void camera_rotate(float turn) {
+
+	camera_rotation += turn;
+}
+
+void key(unsigned char key, int x, int y) {
+
+	if (key == 'q') {
+		camera_rotate(1);
+	} else if (key == 'e') {
+		camera_rotate(-1);
+	}
+}
+
+void mouse(int button, int state, int x, int y) {
+
+//	if (state != GLUT_DOWN) {
+//
+//		if (button == GLUT_LEFT_BUTTON) {
+//			camera_rotate(1);
+//		} else if (button == GLUT_RIGHT_BUTTON) {
+//			camera_rotate(-1);
+//		}
+//	}
 }
 
 void create_seed() {
@@ -237,13 +565,24 @@ void main(int argc, char **argv) {
 	glutCreateWindow("House");
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
 
+	// setup event handlers
 	glutDisplayFunc(display);
 	glutIdleFunc(idle);
 	glutReshapeFunc(reshape);
+	glutKeyboardFunc(key);
+	glutMouseFunc(mouse);
+
 	create_seed();
 	create_menu();
-	create_component();
+
+	// init starting state
+	menu(POLYGONS_HIGH);
+	menu(SPOTLIGHT_ON);
+	menu(SHADER_SMOOTH);
 
 	init();
 	glutMainLoop();

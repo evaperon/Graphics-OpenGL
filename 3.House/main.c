@@ -17,6 +17,8 @@ enum options {
 	EXIT,
 	POLYGONS_LOW, POLYGONS_HIGH, POLYGONS_ULTRA,
 	SPOTLIGHT_ON, SPOTLIGHT_ON_MOVING, SPOTLIGHT_OFF,
+	GRASS_NONE, GRASS_SHORT, GRASS_TALL,
+	SUN_STATIC, SUN_DYNAMIC,
 	SHADER_SMOOTH, SHADER_FLAT
 };
 
@@ -28,22 +30,20 @@ int polygons;
 
 float sun_speed = 40;
 float camera_rotation = 0;
-char spotlight_speed = 0;
+float spotlight_speed = 0;
+float grass = 0;
+char sun_dynamic = 0;
 
 float t; // contains the current time in seconds
 
 // ==
 
 const GLfloat sunlight_ambient[] = {0.0f, 0.0f, 0.0f, 1.0f};
-GLfloat sunlight_diffuse[] = {0.3f, 0.3f, 0.3f, 1.0f};
-GLfloat sunlight_specular[] = {0.3f, 0.3f, 0.3f, 1.0f};
-GLfloat sunlight_position[] = {0.0f, 0.0f, 0.0f, 1.0f};
+const GLfloat sunlight_position[] = {0.0f, 0.0f, 0.0f, 1.0f};
 
 const GLfloat spotlight_ambient[] = {0.0f, 0.0f, 0.0f, 1.0f};
 const GLfloat spotlight_diffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
 const GLfloat spotlight_specular[] = {1.0f, 1.0f, 1.0f, 1.0f};
-//const GLfloat spotlight_position[] = { 5.0f, 10+(float) sqrt(75.0), 0.5f, 1.0f };
-//const GLfloat sd[] = {0.0f, -1.0f, 0.0f, 0.0f};
 
 const GLfloat sphere_emission[] = {1.0f, 1.0f, 0.0f, 1.0f};
 const GLfloat sphere_ambient[] = {0.0f, 0.0f, 0.0f, 1.0f};
@@ -51,21 +51,27 @@ const GLfloat sphere_diffuse[] = {0.0f, 0.0f, 0.0f, 1.0f};
 const GLfloat sphere_specular[] = {0.0f, 0.0f, 0.0f, 1.0f};
 
 const GLfloat ground_emission[] = {0.0f, 0.0f, 0.0f, 1.0f};
-const GLfloat ground_ambient[] = {124.0f / 255.0f, 252.0f / 255.0f, 0.0f, 1.0f};
-const GLfloat ground_diffuse[] = {124.0f / 255.0f, 252.0f / 255.0f, 0.0f, 1.0f};
+const GLfloat ground_ambient[] = {0.5f, 1.0f, 0.0f, 1.0f};
+const GLfloat ground_diffuse[] = {0.5f, 1.0f, 0.0f, 1.0f};
 const GLfloat ground_specular[] = {0.0f, 0.0f, 0.0f, 1.0f};
 
+const GLfloat soil_emission[] = {0.0f, 0.0f, 0.0f, 1.0f};
+const GLfloat soil_ambient[] = {0.4f, 0.15f, 0.0f, 1.0f};
+const GLfloat soil_diffuse[] = {0.4f, 0.15f, 0.0f, 1.0f};
+const GLfloat soil_specular[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
 const GLfloat house_emission[] = {0.0f, 0.0f, 0.0f, 1.0f};
-const GLfloat house_ambient[] = {89.0f / 255.0f, 38.0f / 255.0f, 9.0f / 255.0f, 1.0f};
-const GLfloat house_diffuse[] = {89.0f / 255.0f, 38.0f / 255.0f, 9.0f / 255.0f, 1.0f};
+const GLfloat house_ambient[] = {0.4f, 0.15f, 0.0f, 1.0f};
+const GLfloat house_diffuse[] = {0.4f, 0.15f, 0.0f, 1.0f};
 const GLfloat house_specular[] = {0.0f, 0.0f, 0.0f, 1.0f};
 
 const GLfloat roof_emission[] = {0.0f, 0.0f, 0.0f, 1.0f};
 const GLfloat roof_ambient[] = {0.5f, 0.5f, 0.5f, 1.0f};
 const GLfloat roof_diffuse[] = {0.5f, 0.5f, 0.5f, 1.0f};
 const GLfloat roof_specular[] = {0.9f, 0.9f, 0.9f, 1.0f};
-const GLfloat high_shininess[] = {100.0f};
+const GLfloat high_shin[] = {100.0f};
 
+const int grass_soil_ration = 12;
 
 // === Declarations ===
 
@@ -185,17 +191,27 @@ void set_projection() {
 
 void draw_ground() {
 
-	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, ground_emission);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ground_ambient);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, ground_diffuse);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, ground_specular);
-
 	GLfloat size = 40;
 
 	point3 p1 = {-size, 0, size};
 	point3 p2 = {size, 0, size};
 	point3 p3 = {size, 0, -size};
 	point3 p4 = {-size, 0, -size};
+
+	if (grass > 0 && polygons > 0) {
+
+		glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, soil_emission);
+		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, soil_ambient);
+		glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, soil_diffuse);
+		glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, soil_specular);
+
+		draw_quad(p1, p2, p3, p4);
+	}
+
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, ground_emission);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ground_ambient);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, ground_diffuse);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, ground_specular);
 
 	if (polygons == 1) {
 
@@ -215,8 +231,24 @@ void draw_ground() {
 
 			for (float z = -size; z <= size; z += step) {
 
-				point3 p1 = {x, 0, z};
-				point3 p2 = {x + step, 0, z};
+				// when grass is on, mix the materials
+				if (grass > 0 && rand() % grass_soil_ration == 0) {
+					glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, soil_emission);
+					glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, soil_ambient);
+					glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, soil_diffuse);
+					glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, soil_specular);
+				} else {
+					glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, ground_emission);
+					glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ground_ambient);
+					glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, ground_diffuse);
+					glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, ground_specular);
+				}
+
+				float h1 = grass * ((rand() % 1000) / 1000.0f);
+				float h2 = grass * ((rand() % 1000) / 1000.0f);
+
+				point3 p1 = {x, h1, z};
+				point3 p2 = {x + step, h2, z};
 				glVertex3fv(p1);
 				glVertex3fv(p2);
 			}
@@ -236,7 +268,6 @@ void draw_house() {
 	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, house_ambient);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, house_diffuse);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, house_specular);
-
 
 	{
 		point3 p1 = {-5, 0, 10};
@@ -293,7 +324,7 @@ void draw_house() {
 	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, roof_ambient);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, roof_diffuse);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, roof_specular);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, high_shininess);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, high_shin);
 
 
 	GLfloat rooftop = 10 + sin(M_PI / 3) * 10;
@@ -314,14 +345,12 @@ void draw_house() {
 
 		draw_quad(p1, p2, p3, p4);
 	}
-
 	{
 		point3 p1 = {-5, 10, 10};
 		point3 p2 = {0, rooftop, 10};
 		point3 p3 = {5, 10, 10};
 
 		draw_triangle(p1, p2, p3);
-
 	}
 	{
 		point3 p1 = {-5, 10, -10};
@@ -361,15 +390,31 @@ void draw_part(point3 p1, point3 p2, point3 p3, int splits) {
 	}
 }
 
-void draw_sun(float lumens) {
+void draw_sun(float sun_angle) {
 
-	GLfloat sunlight_diffuse[] = {lumens, lumens, lumens, 1.0f};
-	GLfloat sunlight_specular[] = {lumens, lumens, lumens, 1.0f};
-
-	glLightfv(GL_LIGHT0, GL_AMBIENT, sunlight_ambient);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, sunlight_diffuse);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, sunlight_specular);
 	glLightfv(GL_LIGHT0, GL_POSITION, sunlight_position);
+	glLightfv(GL_LIGHT0, GL_AMBIENT, sunlight_ambient);
+
+	float lumens = 0.3 + 0.7 * sin(sun_angle * M_PI / 180); // from 0.3 to 1.0
+
+	if (sun_dynamic) {
+
+		float mod = pow (sin(sun_angle * M_PI / 180), 2);
+
+		GLfloat sunlight_diffuse[] = {lumens, lumens * mod, lumens * mod, 1.0f};
+		GLfloat sunlight_specular[] = {lumens, lumens * mod, lumens * mod, 1.0f};
+
+		glLightfv(GL_LIGHT0, GL_DIFFUSE, sunlight_diffuse);
+		glLightfv(GL_LIGHT0, GL_SPECULAR, sunlight_specular);
+
+	} else {
+
+		GLfloat sunlight_diffuse[] = {lumens, lumens, lumens, 1.0f};
+		GLfloat sunlight_specular[] = {lumens, lumens, lumens, 1.0f};
+
+		glLightfv(GL_LIGHT0, GL_DIFFUSE, sunlight_diffuse);
+		glLightfv(GL_LIGHT0, GL_SPECULAR, sunlight_specular);
+	}
 
 	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, sphere_emission);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, sphere_ambient);
@@ -396,7 +441,7 @@ void draw_spotlight() {
 
 	GLfloat rooftop = 10 + sin(M_PI / 3) * 10;
 
-	GLfloat p[] = {0, rooftop, 10, 1};
+	GLfloat p[] = {0.01f, rooftop, 10, 1};
 
 	float angle = sin(t * spotlight_speed) * 0.5;
 	GLfloat direction[] = {angle, -1.0f, 0.4f};
@@ -423,7 +468,6 @@ void display() {
 	glRotatef(camera_rotation, 0, 1, 0);
 
 	float sun_angle = fmod(t * sun_speed, 180); // in degrees
-	float sun_lumens = 0.3 + 0.7 * sin(sun_angle * M_PI / 180); // from 0.3 to 1.0
 
 	draw_ground();
 	draw_house();
@@ -432,7 +476,7 @@ void display() {
 	glPushMatrix();
 	glRotatef(-sun_angle, 0, 0, 1);
 	glTranslatef(-50, 0, 0);
-	draw_sun(sun_lumens);
+	draw_sun(sun_angle);
 	glPopMatrix();
 
 
@@ -481,6 +525,23 @@ void menu(int id) {
 		case SPOTLIGHT_OFF:
 			glDisable(GL_LIGHT1);
 			break;
+		case GRASS_NONE:
+			grass = 0;
+			break;
+		case GRASS_SHORT:
+			grass = 5;
+			menu(POLYGONS_ULTRA);
+			break;
+		case GRASS_TALL:
+			grass = 8;
+			menu(POLYGONS_ULTRA);
+			break;
+		case SUN_STATIC:
+			sun_dynamic = 0;
+			break;
+		case SUN_DYNAMIC:
+			sun_dynamic = 1;
+			break;
 		case SHADER_SMOOTH:
 			glShadeModel(GL_SMOOTH);
 			break;
@@ -506,6 +567,15 @@ void create_menu() {
 	glutAddMenuEntry("On Moving", SPOTLIGHT_ON_MOVING);
 	glutAddMenuEntry("Off", SPOTLIGHT_OFF);
 
+	int menu_grass = glutCreateMenu(menu);
+	glutAddMenuEntry("Flat", GRASS_NONE);
+	glutAddMenuEntry("Short", GRASS_SHORT);
+	glutAddMenuEntry("Tall", GRASS_TALL);
+
+	int menu_sun = glutCreateMenu(menu);
+	glutAddMenuEntry("Static hue", SUN_STATIC);
+	glutAddMenuEntry("Dynamic hue", SUN_DYNAMIC);
+
 	int menu_shader = glutCreateMenu(menu);
 	glutAddMenuEntry("Smooth", SHADER_SMOOTH);
 	glutAddMenuEntry("Flat", SHADER_FLAT);
@@ -513,6 +583,8 @@ void create_menu() {
 	glutCreateMenu(menu);
 	glutAddSubMenu("Polygons", menu_polygons);
 	glutAddSubMenu("Spotlight", menu_spotlight);
+	glutAddSubMenu("Grass", menu_grass);
+	glutAddSubMenu("Sun", menu_sun);
 	glutAddSubMenu("Shader", menu_shader);
 	glutAddMenuEntry("Exit", EXIT);
 
@@ -581,7 +653,9 @@ void main(int argc, char **argv) {
 
 	// init starting state
 	menu(POLYGONS_HIGH);
-	menu(SPOTLIGHT_ON);
+	menu(SPOTLIGHT_OFF);
+	menu(GRASS_NONE);
+	menu(SUN_STATIC);
 	menu(SHADER_SMOOTH);
 
 	init();
